@@ -34,12 +34,11 @@ public class TransactionPayloadEventDataDeserializer implements EventDataDeseria
     public static final int OTW_PAYLOAD_SIZE_FIELD = 1;
     public static final int OTW_PAYLOAD_COMPRESSION_TYPE_FIELD = 2;
     public static final int OTW_PAYLOAD_UNCOMPRESSED_SIZE_FIELD = 3;
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 10;
 
     @Override
     public TransactionPayloadEventData deserialize(ByteArrayInputStream inputStream) throws IOException {
         TransactionPayloadEventData eventData = new TransactionPayloadEventData();
-        boolean chunked = false;
         long uncompressedSize = 0;
         // Read the header fields from the event data
         while (inputStream.available() > 0) {
@@ -85,12 +84,12 @@ public class TransactionPayloadEventDataDeserializer implements EventDataDeseria
             eventData.setUncompressedSize(eventData.getPayloadSize());
         }
         // set the payload to the rest of the input buffer
-        eventData.setPayload(inputStream.read(eventData.getPayloadSize()));
+//        eventData.setPayload(inputStream.read(eventData.getPayloadSize()));
 
         ArrayList<Event> decompressedEvents = new ArrayList<>();
 //        if (chunked) {
             // Decompress the payload
-        decompressedEvents = getUncompressedEvents(eventData);
+        decompressedEvents = getUncompressedEvents(eventData, inputStream);
 //        }
 //        else {
 //            // Decompress the payload
@@ -123,13 +122,12 @@ public class TransactionPayloadEventDataDeserializer implements EventDataDeseria
      * @return the list of deserialized events
      * @throws IOException if an error occurs during decompression or deserialization
      */
-    public ArrayList<Event> getUncompressedEvents(TransactionPayloadEventData eventData) throws IOException {
+    public ArrayList<Event> getUncompressedEvents(TransactionPayloadEventData eventData, ByteArrayInputStream inputStream) throws IOException {
         byte[] src = eventData.getPayload();
         ArrayList<Event> decompressedEvents = new ArrayList<>();
 
         // Wrap the input payload in a ZstdInputStream for decompression
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(src);
-             ZstdInputStream zstdInputStream = new ZstdInputStream(inputStream)) {
+        try (ZstdInputStream zstdInputStream = new ZstdInputStream(inputStream)) {
 
             // Use a buffer to read decompressed data in chunks
             byte[] buffer = new byte[BUFFER_SIZE];
